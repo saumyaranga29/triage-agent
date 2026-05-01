@@ -7,7 +7,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from dotenv import load_dotenv
 
-# Import google genai SDK
+
 from google import genai
 from google.genai import types
 from pydantic import BaseModel
@@ -28,7 +28,7 @@ def load_corpus(base_dir):
         path = os.path.join(base_dir, company, "**", "*.md")
         files = glob.glob(path, recursive=True)
         for f in files:
-            # Handle Windows MAX_PATH limit by prepending \\?\ to absolute paths
+            
             abs_f = os.path.abspath(f)
             if os.name == 'nt' and not abs_f.startswith('\\\\?\\'):
                 abs_f = '\\\\?\\' + abs_f
@@ -43,7 +43,7 @@ def load_corpus(base_dir):
 
 def retrieve_docs(issue_text, company, docs, top_k=3):
     """Retrieves top_k most relevant documents using TF-IDF and Cosine Similarity."""
-    # Filter docs based on company if specified
+    
     if company and str(company).lower() != "none" and pd.notna(company) and str(company).strip() != "":
         company_val = str(company).lower().strip()
         filtered = [d for d in docs if d['company'] == company_val]
@@ -144,7 +144,7 @@ Task: Decide the best action for this ticket. Respond in JSON.
             )
             data = json.loads(response.text)
             
-            # Ensure strict enum compliance
+           
             valid_rt = ["product_issue", "feature_request", "bug", "invalid"]
             rt = data.get("request_type", "product_issue")
             if rt not in valid_rt:
