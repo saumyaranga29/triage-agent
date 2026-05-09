@@ -8,7 +8,7 @@ Run with:
 
 import os, json, glob, sys, time, textwrap
 
-# ── Force UTF-8 on Windows so rich box-drawing chars don't crash cp1252
+
 if sys.platform == "win32":
     import io
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
@@ -42,9 +42,7 @@ from google.genai import types
 
 load_dotenv()
 
-# ─────────────────────────────────────────────
-#  Theme & Console
-# ─────────────────────────────────────────────
+
 THEME = Theme({
     "banner":       "bold cyan",
     "brand.hr":     "bold bright_green",
@@ -63,9 +61,7 @@ THEME = Theme({
 })
 console = Console(theme=THEME, highlight=False, force_terminal=True)
 
-# ─────────────────────────────────────────────
-#  Constants
-# ─────────────────────────────────────────────
+
 BRAND_COLORS = {
     "hackerrank": "brand.hr",
     "claude":     "brand.claude",
@@ -106,9 +102,7 @@ DEMO_TICKETS = [
     },
 ]
 
-# ─────────────────────────────────────────────
-#  Pydantic schema for structured output
-# ─────────────────────────────────────────────
+
 class TicketOutput(BaseModel):
     status: str
     product_area: str
@@ -116,9 +110,7 @@ class TicketOutput(BaseModel):
     justification: str
     request_type: str
 
-# ─────────────────────────────────────────────
-#  Banner
-# ─────────────────────────────────────────────
+
 BANNER_ART = """
   +=======================================================+
   |  TRIAGE AGENT  --  MULTI-DOMAIN SUPPORT OPERATIONS  |
@@ -145,9 +137,7 @@ def print_banner():
     console.print(Rule(style="dim cyan"))
     console.print()
 
-# ─────────────────────────────────────────────
-#  Corpus loader
-# ─────────────────────────────────────────────
+
 def load_corpus(base_dir: str):
     docs = []
     for company in ["hackerrank", "claude", "visa"]:
@@ -164,9 +154,7 @@ def load_corpus(base_dir: str):
                 pass
     return docs
 
-# ─────────────────────────────────────────────
-#  Retrieval
-# ─────────────────────────────────────────────
+
 def retrieve_docs(query: str, company: str, docs, top_k: int = 5):
     c = (company or "").lower().strip()
     if c and c != "none":
@@ -186,9 +174,7 @@ def retrieve_docs(query: str, company: str, docs, top_k: int = 5):
     except Exception:
         return []
 
-# ─────────────────────────────────────────────
-#  AI Triage
-# ─────────────────────────────────────────────
+
 SYSTEM_PROMPT = """\
 You are an expert support triage agent for HackerRank, Claude, and Visa.
 Your task is to analyze support tickets and decide whether to reply or escalate,
@@ -224,7 +210,7 @@ Retrieved Context from Help Center:
 
 Task: Decide the best action for this ticket. Respond in JSON."""
 
-    # Retry loop with exponential backoff for rate-limit (429) errors
+    
     for attempt in range(MAX_RETRIES):
         try:
             resp = client.models.generate_content(
@@ -239,7 +225,7 @@ Task: Decide the best action for this ticket. Respond in JSON."""
             )
             data = json.loads(resp.text)
 
-            # Enforce enum
+           
             if data.get("status") not in ("replied", "escalated"):
                 data["status"] = "escalated"
             if data.get("request_type") not in ("product_issue", "feature_request", "bug", "invalid"):
@@ -256,9 +242,7 @@ Task: Decide the best action for this ticket. Respond in JSON."""
 
     raise RuntimeError(f"Failed after {MAX_RETRIES} retries due to rate limiting.")
 
-# ─────────────────────────────────────────────
-#  Render single ticket result
-# ─────────────────────────────────────────────
+
 STATUS_ICON = {"replied": "✅", "escalated": "🚨"}
 TYPE_ICON   = {
     "product_issue": "🔧",
@@ -284,7 +268,6 @@ def render_result(ticket_num: int, total: int, issue: str, subject: str,
     rt_style = f"type.{rt}"
     b_style  = brand_style(company)
 
-    # ── Ticket header row
     header_table = Table.grid(padding=(0, 1))
     header_table.add_column(justify="left", no_wrap=True)
     header_table.add_column(justify="right", no_wrap=True)
@@ -293,7 +276,7 @@ def render_result(ticket_num: int, total: int, issue: str, subject: str,
         Text(f"{st_icon} {st.upper()}  ·  {rt_icon} {rt}", style=st_style),
     )
 
-    # ── Meta chips row
+  
     meta_table = Table.grid(padding=(0, 2))
     meta_table.add_column(no_wrap=True)
     meta_table.add_column(no_wrap=True)
@@ -304,14 +287,14 @@ def render_result(ticket_num: int, total: int, issue: str, subject: str,
         Text(""),
     )
 
-    # ── Issue text (truncated)
+    
     issue_preview = textwrap.shorten(issue, width=110, placeholder="…")
 
-    # ── Response / justification
+   
     res_wrapped = textwrap.fill(res, width=108)
     jus_wrapped = textwrap.fill(jus, width=108)
 
-    # Colour the border based on status
+    
     border_color = "green" if st == "replied" else "red"
 
     body = (
@@ -339,9 +322,7 @@ def render_result(ticket_num: int, total: int, issue: str, subject: str,
     )
     console.print()
 
-# ─────────────────────────────────────────────
-#  Summary table
-# ─────────────────────────────────────────────
+
 def render_summary(tickets, results):
     table = Table(
         title="📋  Triage Summary",
@@ -401,9 +382,7 @@ def render_summary(tickets, results):
     console.print(Align.center(stats))
     console.print()
 
-# ─────────────────────────────────────────────
-#  Run demo on a list of ticket dicts
-# ─────────────────────────────────────────────
+
 def run_tickets(client, tickets, docs, label="Demo"):
     total = len(tickets)
     results = []
@@ -433,15 +412,13 @@ def run_tickets(client, tickets, docs, label="Demo"):
                 }
             results.append(res)
             progress.advance(task)
-            # Delay between tickets to respect rate limits
+            
             if i < total:
                 time.sleep(4)
 
     return results
 
-# ─────────────────────────────────────────────
-#  Interactive single-ticket mode
-# ─────────────────────────────────────────────
+
 def interactive_mode(client, docs):
     console.print(Panel(
         "[bold cyan]Interactive Triage Mode[/bold cyan]\n"
@@ -479,13 +456,11 @@ def interactive_mode(client, docs):
         if again == "no":
             break
 
-# ─────────────────────────────────────────────
-#  Main
-# ─────────────────────────────────────────────
+
 def main():
     print_banner()
 
-    # ── API key check
+    
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         console.print(Panel(
@@ -498,7 +473,7 @@ def main():
 
     client = genai.Client(api_key=api_key)
 
-    # ── Load corpus
+   
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     data_dir  = os.path.join(repo_root, "data")
 
@@ -508,7 +483,7 @@ def main():
     console.print(f"[bold green]✔  Corpus loaded:[/bold green] [bold]{len(docs)}[/bold] documents  "
                   f"([brand.hr]HackerRank[/brand.hr]  ·  [brand.claude]Claude[/brand.claude]  ·  [brand.visa]Visa[/brand.visa])\n")
 
-    # ── Mode selection
+  
     console.print(Panel(
         "[bold]Choose a mode:[/bold]\n\n"
         "  [bold cyan]1[/bold cyan]  →  Run demo tickets (6 curated cases)\n"
